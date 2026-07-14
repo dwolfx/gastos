@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import type { Transaction } from '../context/FinanceContext';
 import { 
@@ -17,8 +17,18 @@ export const TransactionsList: React.FC = () => {
   
   // Custom states for filters, category summary, and export dropdown
   const [activeTypeFilter, setActiveTypeFilter] = useState<'all' | 'income' | 'expense' | 'pending' | 'paid'>('all');
-  const [showCategoriesPanel, setShowCategoriesPanel] = useState(false);
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const categoriesScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollCategories = (direction: 'left' | 'right') => {
+    if (categoriesScrollRef.current) {
+      const scrollAmount = 240;
+      categoriesScrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   // Focal month state representing the centered month in the carousel (YYYY-MM)
   const [focalMonth, setFocalMonth] = useState<string>(() => {
@@ -702,78 +712,125 @@ export const TransactionsList: React.FC = () => {
           {focalMonth && (
             <div className="glass-panel" style={{ padding: 'var(--spacing-lg)' }}>
               
-              {/* List Header and Collapsible Categories button */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: '8px' }}>
+              {/* List Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 700, textTransform: 'capitalize' }}>
                   Detalhes de {getMonthName(focalMonth)} {focalMonth.split('-')[0]}
                 </h2>
-                
-                {categoryTotals.length > 0 && (
-                  <button
-                    onClick={() => setShowCategoriesPanel(!showCategoriesPanel)}
-                    className="btn btn-secondary"
-                    style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <span>{showCategoriesPanel ? '🙈 Ocultar Resumo' : '📊 Ver Distribuição'}</span>
-                  </button>
-                )}
               </div>
 
-              {/* Collapsible Categories Grid of Mini-Cards */}
-              {showCategoriesPanel && categoryTotals.length > 0 && (
-                <div 
-                  className="animate-fade" 
-                  style={{ 
-                    background: 'rgba(255, 255, 255, 0.01)', 
-                    border: '1px solid var(--border-color)', 
-                    borderRadius: 'var(--radius-md)', 
-                    padding: 'var(--spacing-md)', 
-                    marginBottom: 'var(--spacing-lg)',
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-                    gap: 'var(--spacing-sm)'
-                  }}
-                >
-                  {categoryTotals.map(([cat, total]) => {
-                    const { icon, color } = getCategoryIconAndColor(cat);
-                    return (
-                      <div 
-                        key={cat}
-                        className="glass-panel"
-                        style={{ 
-                          padding: '10px 12px', 
-                          borderRadius: 'var(--radius-sm)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '4px',
-                          background: 'rgba(255, 255, 255, 0.005)'
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ 
-                            fontSize: '1rem', 
-                            padding: '4px', 
-                            borderRadius: '4px', 
-                            backgroundColor: color + '15',
+              {/* Category Summary Carousel */}
+              {categoryTotals.length > 0 && (
+                <div style={{ position: 'relative', marginBottom: 'var(--spacing-lg)' }}>
+                  {/* Scroll Left Button */}
+                  <button
+                    onClick={() => scrollCategories('left')}
+                    className="btn btn-secondary"
+                    style={{
+                      position: 'absolute',
+                      left: '-8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10,
+                      width: '28px',
+                      height: '28px',
+                      padding: 0,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: 'var(--shadow-md)',
+                      opacity: 0.85
+                    }}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  {/* Horizontal Scroll Area */}
+                  <div 
+                    ref={categoriesScrollRef}
+                    className="carousel-grid"
+                    style={{ 
+                      display: 'flex',
+                      gap: 'var(--spacing-sm)',
+                      overflowX: 'auto',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      padding: '4px 20px',
+                      margin: '0 10px'
+                    }}
+                  >
+                    {categoryTotals.map(([cat, total]) => {
+                      const { icon, color } = getCategoryIconAndColor(cat);
+                      return (
+                        <div 
+                          key={cat}
+                          className="glass-panel"
+                          style={{ 
+                            padding: '10px 12px', 
+                            borderRadius: 'var(--radius-sm)',
                             display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}>{icon}</span>
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            fontWeight: 600, 
-                            color: 'var(--text-secondary)',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis'
-                          }}>{cat}</span>
+                            flexDirection: 'column',
+                            gap: '4px',
+                            background: 'rgba(255, 255, 255, 0.005)',
+                            minWidth: '135px',
+                            flexShrink: 0
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ 
+                              fontSize: '1rem', 
+                              padding: '4px', 
+                              borderRadius: '4px', 
+                              backgroundColor: color + '15',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>{icon}</span>
+                            <span style={{ 
+                              fontSize: '0.75rem', 
+                              fontWeight: 600, 
+                              color: 'var(--text-secondary)',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}>{cat}</span>
+                          </div>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 750, color: 'var(--text-primary)', marginTop: '4px' }}>
+                            {formatCurrency(total)}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '0.95rem', fontWeight: 750, color: 'var(--text-primary)', marginTop: '4px' }}>
-                          {formatCurrency(total)}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+
+                  {/* Scroll Right Button */}
+                  <button
+                    onClick={() => scrollCategories('right')}
+                    className="btn btn-secondary"
+                    style={{
+                      position: 'absolute',
+                      right: '-8px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      zIndex: 10,
+                      width: '28px',
+                      height: '28px',
+                      padding: 0,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: 'var(--shadow-md)',
+                      opacity: 0.85
+                    }}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
                 </div>
               )}
 

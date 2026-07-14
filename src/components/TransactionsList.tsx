@@ -204,15 +204,22 @@ export const TransactionsList: React.FC = () => {
     }
   };
 
-  // Calculate expenses sums for the categories grid
+  // Calculate flow sums (income and expense) for the categories carousel
   const getCategoryTotals = () => {
-    const totals: Record<string, number> = {};
-    activeTransactions
-      .filter(t => t.type === 'expense')
-      .forEach(t => {
-        totals[t.category] = (totals[t.category] || 0) + t.amount;
-      });
-    return Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    const totals: Record<string, { amount: number; type: 'income' | 'expense' }> = {};
+    activeTransactions.forEach(t => {
+      if (!totals[t.category]) {
+        totals[t.category] = { amount: 0, type: t.type };
+      }
+      totals[t.category].amount += t.amount;
+    });
+    return Object.entries(totals)
+      .map(([cat, data]) => ({
+        category: cat,
+        amount: data.amount,
+        type: data.type
+      }))
+      .sort((a, b) => b.amount - a.amount);
   };
 
   const categoryTotals = getCategoryTotals();
@@ -795,14 +802,15 @@ export const TransactionsList: React.FC = () => {
                       margin: '0 10px'
                     }}
                   >
-                    {categoryTotals.map(([cat, total]) => {
+                    {categoryTotals.map(({ category: cat, amount, type }) => {
                       const { icon, color } = getCategoryIconAndColor(cat);
                       const isSelected = selectedCategory === cat;
+                      const isIncome = type === 'income';
                       return (
                         <div 
                           key={cat}
                           onClick={() => setSelectedCategory(isSelected ? null : cat)}
-                          className="glass-panel"
+                          className="glass-panel category-card"
                           style={{ 
                             padding: '10px 12px', 
                             borderRadius: 'var(--radius-sm)',
@@ -838,8 +846,13 @@ export const TransactionsList: React.FC = () => {
                               textOverflow: 'ellipsis'
                             }}>{cat}</span>
                           </div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 750, color: isSelected ? '#ffffff' : 'var(--text-primary)', marginTop: '4px' }}>
-                            {formatCurrency(total)}
+                          <div style={{ 
+                            fontSize: '0.95rem', 
+                            fontWeight: 750, 
+                            color: isSelected ? '#ffffff' : (isIncome ? '#34d399' : 'var(--text-primary)'), 
+                            marginTop: '4px' 
+                          }}>
+                            {isIncome ? '+' : '-'} {formatCurrency(amount)}
                           </div>
                         </div>
                       );

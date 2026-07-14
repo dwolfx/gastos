@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FinanceProvider, useFinance } from './context/FinanceContext';
+import { useState, useEffect } from 'react';
+import { useFinance, FinanceProvider } from './context/FinanceContext';
 import { Dashboard } from './components/Dashboard';
 import { TransactionsList } from './components/TransactionsList';
 import { BoletosView } from './components/BoletosView';
@@ -15,17 +15,43 @@ import {
   Settings as SettingsIcon,
   PiggyBank,
   Menu,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
+import { TransactionModal } from './components/TransactionModal';
+import { LandingPage } from './components/LandingPage';
+import { APP_CONFIG } from './config/appConfig';
 import './index.css';
 
-export type ViewType = 'dashboard' | 'transactions' | 'boletos' | 'investments' | 'debts' | 'settings';
+export type ViewType = 'dashboard' | 'transactions' | 'boletos' | 'investments' | 'debts' | 'settings' | 'landing';
 
 function MainAppContent() {
   const { profile } = useFinance();
-  const [currentView, setCurrentView] = useState<ViewType>('dashboard');
+  const [currentView, setCurrentView] = useState<ViewType>('landing');
   const [settingsTab, setSettingsTab] = useState<'general' | 'profile' | 'categories'>('general');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.title = APP_CONFIG.titleName;
+  }, []);
+
+  // Helper function to animate view changes using View Transitions API
+  const navigateTo = (view: ViewType, settingsTabOpt?: 'general' | 'profile' | 'categories') => {
+    // Check if browser supports View Transitions API
+    if (document.startViewTransition) {
+      document.startViewTransition(() => {
+        setCurrentView(view);
+        if (settingsTabOpt) {
+          setSettingsTab(settingsTabOpt);
+        }
+      });
+    } else {
+      setCurrentView(view);
+      if (settingsTabOpt) {
+        setSettingsTab(settingsTabOpt);
+      }
+    }
+  };
 
   const renderView = () => {
     switch (currentView) {
@@ -55,16 +81,18 @@ function MainAppContent() {
   ] as const;
 
   const handleProfileClick = () => {
-    setCurrentView('settings');
-    setSettingsTab('profile');
+    navigateTo('settings', 'profile');
     setMobileMenuOpen(false);
   };
 
   const handleSettingsClick = () => {
-    setCurrentView('settings');
-    setSettingsTab('general');
+    navigateTo('settings', 'general');
     setMobileMenuOpen(false);
   };
+
+  if (currentView === 'landing') {
+    return <LandingPage onEnterApp={() => navigateTo('dashboard')} />;
+  }
 
   return (
     <div className="app-container">
@@ -72,7 +100,7 @@ function MainAppContent() {
       <header className="mobile-header">
         <div className="mobile-logo">
           <PiggyBank size={24} />
-          <span>Gastos</span>
+          <span>{APP_CONFIG.titleName}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* User profile bubble */}
@@ -108,7 +136,7 @@ function MainAppContent() {
       <aside className="sidebar">
         <div className="sidebar-logo">
           <PiggyBank size={28} />
-          <span>Gastos</span>
+          <span>{APP_CONFIG.titleName}</span>
         </div>
         <nav style={{ flexGrow: 1 }}>
           <ul className="sidebar-menu">
@@ -116,7 +144,7 @@ function MainAppContent() {
               <li key={item.id}>
                 <button
                   className={`sidebar-link ${currentView === item.id ? 'active' : ''}`}
-                  onClick={() => setCurrentView(item.id)}
+                  onClick={() => navigateTo(item.id)}
                   style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left' }}
                 >
                   {item.icon}
@@ -151,23 +179,44 @@ function MainAppContent() {
             </div>
           </div>
 
-          <button
-            onClick={handleSettingsClick}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: currentView === 'settings' ? 'var(--color-purple)' : 'var(--text-secondary)',
-              padding: '6px',
-              borderRadius: 'var(--radius-xs)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-            title="Configurações"
-          >
-            <SettingsIcon size={18} />
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={handleSettingsClick}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: currentView === 'settings' ? 'var(--color-purple)' : 'var(--text-secondary)',
+                padding: '6px',
+                borderRadius: 'var(--radius-xs)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Configurações"
+            >
+              <SettingsIcon size={18} />
+            </button>
+            <button
+              onClick={() => navigateTo('landing')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+                padding: '6px',
+                borderRadius: 'var(--radius-xs)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Sair"
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--color-red)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+            >
+              <LogOut size={18} />
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -185,7 +234,7 @@ function MainAppContent() {
           >
             <div className="sidebar-logo" style={{ marginTop: '50px' }}>
               <PiggyBank size={28} />
-              <span>Gastos</span>
+              <span>{APP_CONFIG.titleName}</span>
             </div>
             <nav style={{ flexGrow: 1 }}>
               <ul className="sidebar-menu">
@@ -194,7 +243,7 @@ function MainAppContent() {
                     <button
                       className={`sidebar-link ${currentView === item.id ? 'active' : ''}`}
                       onClick={() => {
-                        setCurrentView(item.id);
+                        navigateTo(item.id);
                         setMobileMenuOpen(false);
                       }}
                       style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left' }}
@@ -253,7 +302,7 @@ function MainAppContent() {
       )}
 
       {/* Main Content Area */}
-      <main className="main-content">
+      <main className="main-content content-transition-wrapper">
         {renderView()}
       </main>
 
@@ -263,7 +312,7 @@ function MainAppContent() {
           <button
             key={item.id}
             className={`mobile-nav-item ${currentView === item.id ? 'active' : ''}`}
-            onClick={() => setCurrentView(item.id)}
+            onClick={() => navigateTo(item.id)}
             style={{ border: 'none', background: 'none' }}
           >
             {item.icon}
@@ -271,6 +320,9 @@ function MainAppContent() {
           </button>
         ))}
       </nav>
+
+      {/* Global Transaction Modal (Single Instance) */}
+      <TransactionModal />
     </div>
   );
 }

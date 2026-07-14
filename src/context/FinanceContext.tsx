@@ -38,18 +38,6 @@ export interface Installment {
   owner?: string;
 }
 
-export interface Debt {
-  id: string;
-  description: string;
-  totalAmount: number;
-  remainingAmount: number;
-  interestRate: number; // monthly %
-  dueDate?: string; // YYYY-MM-DD
-  status: 'active' | 'paid';
-  payments: { date: string; amount: number }[];
-  paymentStatus: 'paying' | 'waiting';
-}
-
 export interface Investment {
   id: string;
   symbol: string;
@@ -57,9 +45,26 @@ export interface Investment {
   quantity: number;
   averagePrice: number;
   currentPrice: number;
-  dividendDay?: number; // 1-31
-  dividendYield?: number; // average monthly dividend per unit in currency
-  type: 'cripto' | 'fii' | 'acao';
+  dividendDay?: number;
+  dividendYield?: number;
+  type: 'fii' | 'acao' | 'cripto';
+}
+
+export interface DebtPayment {
+  date: string;
+  amount: number;
+}
+
+export interface Debt {
+  id: string;
+  description: string;
+  totalAmount: number;
+  remainingAmount: number;
+  interestRate: number; // monthly %
+  dueDate: string; // YYYY-MM-DD
+  status: 'active' | 'paid';
+  payments: DebtPayment[];
+  paymentStatus: 'paying' | 'waiting'; // paying (Em Amortização) or waiting (Aguardando Início)
 }
 
 export interface Boleto {
@@ -97,6 +102,12 @@ interface FinanceContextType {
   addCategory: (type: 'income' | 'expense', name: string) => void;
   renameCategory: (type: 'income' | 'expense', oldName: string, newName: string) => void;
   deleteCategory: (type: 'income' | 'expense', name: string) => void;
+  
+  // Global Transaction Modal State
+  isTransactionModalOpen: boolean;
+  editingTransaction: Transaction | null;
+  openTransactionModal: (tx?: Transaction | null) => void;
+  closeTransactionModal: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
@@ -136,28 +147,61 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   });
 
+  // Global Modal State
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
+  const openTransactionModal = (tx?: Transaction | null) => {
+    setEditingTransaction(tx || null);
+    setIsTransactionModalOpen(true);
+  };
+
+  const closeTransactionModal = () => {
+    setIsTransactionModalOpen(false);
+    setEditingTransaction(null);
+  };
+
   // 2. Transactions State
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const hasShared = profile.sharedEmails.length > 0;
+    const activeUser = profile.userName;
+
     const saved = localStorage.getItem('gastos_transactions');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved) as Transaction[];
+      if (!hasShared) {
+        // Clean up legacy Vanessa or Casal entries in local storage
+        return parsed.map(t => {
+          let cleanDesc = t.description;
+          if (t.description.includes('Vanessa')) {
+            cleanDesc = t.description.replace('Vanessa', 'Freelance');
+          }
+          if (t.owner === 'Vanessa' || t.owner === 'Casal') {
+            return { ...t, description: cleanDesc, owner: activeUser };
+          }
+          return t;
+        });
+      }
+      return parsed;
+    }
 
     // Default Seed Data
     const seedTransactions: Transaction[] = [
       // Incomes
       { id: '1', description: 'Salário Victor', amount: 8500, type: 'income', category: 'Salário', date: '2026-07-05', status: 'paid', owner: 'Victor' },
-      { id: '2', description: 'Salário Vanessa', amount: 9200, type: 'income', category: 'Salário', date: '2026-07-05', status: 'paid', owner: 'Vanessa' },
+      { id: '2', description: 'Salário Freelance', amount: 9200, type: 'income', category: 'Salário', date: '2026-07-05', status: 'paid', owner: 'Victor' },
       
       // Regular Expenses
-      { id: '3', description: 'Aluguel & Condomínio', amount: 3200, type: 'expense', category: 'Moradia', date: '2026-07-10', status: 'paid', owner: 'Casal' },
-      { id: '4', description: 'Supermercado Mensal', amount: 1200, type: 'expense', category: 'Alimentação', date: '2026-07-12', status: 'paid', owner: 'Casal' },
+      { id: '3', description: 'Aluguel & Condomínio', amount: 3200, type: 'expense', category: 'Moradia', date: '2026-07-10', status: 'paid', owner: 'Victor' },
+      { id: '4', description: 'Supermercado Mensal', amount: 1200, type: 'expense', category: 'Alimentação', date: '2026-07-12', status: 'paid', owner: 'Victor' },
       { id: '5', description: 'Restaurante Fim de Semana', amount: 350, type: 'expense', category: 'Lazer', date: '2026-07-11', status: 'paid', owner: 'Victor' },
-      { id: '6', description: 'Assinatura Netflix', amount: 55.90, type: 'expense', category: 'Assinaturas', date: '2026-07-15', status: 'pending', owner: 'Vanessa' },
+      { id: '6', description: 'Assinatura Netflix', amount: 55.90, type: 'expense', category: 'Assinaturas', date: '2026-07-15', status: 'pending', owner: 'Victor' },
 
       // Previous Months data for calculations (historical seed)
       { id: 'h1', description: 'Salário Victor', amount: 8500, type: 'income', category: 'Salário', date: '2026-06-05', status: 'paid', owner: 'Victor' },
-      { id: 'h2', description: 'Salário Vanessa', amount: 9200, type: 'income', category: 'Salário', date: '2026-06-05', status: 'paid', owner: 'Vanessa' },
-      { id: 'h3', description: 'Aluguel & Condomínio', amount: 3200, type: 'expense', category: 'Moradia', date: '2026-06-10', status: 'paid', owner: 'Casal' },
-      { id: 'h4', description: 'Supermercado Mensal', amount: 1450, type: 'expense', category: 'Alimentação', date: '2026-06-12', status: 'paid', owner: 'Casal' },
+      { id: 'h2', description: 'Salário Freelance', amount: 9200, type: 'income', category: 'Salário', date: '2026-06-05', status: 'paid', owner: 'Victor' },
+      { id: 'h3', description: 'Aluguel & Condomínio', amount: 3200, type: 'expense', category: 'Moradia', date: '2026-06-10', status: 'paid', owner: 'Victor' },
+      { id: 'h4', description: 'Supermercado Mensal', amount: 1450, type: 'expense', category: 'Alimentação', date: '2026-06-12', status: 'paid', owner: 'Victor' },
       { id: 'h5', description: 'Manutenção Carro', amount: 890, type: 'expense', category: 'Transporte', date: '2026-06-18', status: 'paid', owner: 'Victor' },
     ];
 
@@ -181,7 +225,21 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     }
 
-    return seedTransactions;
+    // Map seed owners based on hasShared
+    return seedTransactions.map(t => {
+      if (!hasShared) {
+        let cleanDesc = t.description;
+        if (t.description.includes('Vanessa')) {
+          cleanDesc = t.description.replace('Vanessa', 'Freelance');
+        }
+        return {
+          ...t,
+          description: cleanDesc,
+          owner: activeUser
+        };
+      }
+      return t;
+    });
   });
 
   // 3. Installments State
@@ -349,6 +407,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addInstallmentPlan = (plan: Omit<Installment, 'id' | 'installmentAmount'>) => {
     const instId = `inst-${Date.now()}`;
     const instAmount = parseFloat((plan.totalAmount / plan.totalInstallments).toFixed(2));
+    const hasShared = profile.sharedEmails.length > 0;
     
     const newPlan: Installment = {
       ...plan,
@@ -368,7 +427,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         category: plan.category,
         date: date,
         status: isPast ? 'paid' : 'pending',
-        owner: plan.owner || (profile.coupleMode ? 'Casal' : profile.userName),
+        owner: plan.owner || (hasShared ? 'Casal' : profile.userName),
         installmentId: instId,
         installmentNumber: i + 1,
         totalInstallments: plan.totalInstallments
@@ -382,6 +441,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addBoleto = (boleto: Omit<Boleto, 'id' | 'status'>) => {
     const boletoId = `bol-${Date.now()}`;
     const txId = `tx-bol-${Date.now()}`;
+    const hasShared = profile.sharedEmails.length > 0;
     
     // Create corresponding transaction
     const newTx: Transaction = {
@@ -392,7 +452,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       category: 'Boletos',
       date: boleto.dueDate,
       status: 'pending',
-      owner: profile.coupleMode ? 'Casal' : profile.userName,
+      owner: hasShared ? 'Casal' : profile.userName,
     };
 
     const newBoleto: Boleto = {
@@ -422,10 +482,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const deleteBoleto = (id: string) => {
-    const boleto = boletos.find(b => b.id === id);
-    if (boleto?.transactionId) {
-      setTransactions(prev => prev.filter(t => t.id !== boleto.transactionId));
-    }
     setBoletos(prev => prev.filter(b => b.id !== id));
   };
 
@@ -441,10 +497,11 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const payDebt = (id: string, amount: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    
     setDebts(prev => prev.map(d => {
       if (d.id === id) {
         const nextRemaining = Math.max(0, d.remainingAmount - amount);
-        const todayStr = new Date().toISOString().split('T')[0];
         
         // Add transaction for the payment
         addTransaction({
@@ -478,6 +535,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteInvestment = (id: string) => {
     setInvestments(prev => prev.filter(i => i.id !== id));
+  };
+
+  const addSharedEmail = (email: string) => {
+    if (!email || profile.sharedEmails.includes(email)) return;
+    updateProfile({ sharedEmails: [...profile.sharedEmails, email] });
+  };
+
+  const removeSharedEmail = (email: string) => {
+    updateProfile({ sharedEmails: profile.sharedEmails.filter(e => e !== email) });
   };
 
   const addCategory = (type: 'income' | 'expense', name: string) => {
@@ -525,15 +591,6 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setInstallments(prev => prev.map(i => i.category === name ? { ...i, category: 'Outros' } : i));
   };
 
-  const addSharedEmail = (email: string) => {
-    if (!email || profile.sharedEmails.includes(email)) return;
-    updateProfile({ sharedEmails: [...profile.sharedEmails, email] });
-  };
-
-  const removeSharedEmail = (email: string) => {
-    updateProfile({ sharedEmails: profile.sharedEmails.filter(e => e !== email) });
-  };
-
   return (
     <FinanceContext.Provider value={{
       profile,
@@ -559,7 +616,13 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       removeSharedEmail,
       addCategory,
       renameCategory,
-      deleteCategory
+      deleteCategory,
+      
+      // Global Modal exports
+      isTransactionModalOpen,
+      editingTransaction,
+      openTransactionModal,
+      closeTransactionModal
     }}>
       {children}
     </FinanceContext.Provider>

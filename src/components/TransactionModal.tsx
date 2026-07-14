@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
-import type { Transaction } from '../context/FinanceContext';
 import { X, Trash2, Calendar, Info } from 'lucide-react';
 
-interface TransactionModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  editTransaction?: Transaction | null;
-}
-
-export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, editTransaction }) => {
-  const { profile, addTransaction, updateTransaction, deleteTransaction, addInstallmentPlan } = useFinance();
+export const TransactionModal: React.FC = () => {
+  const { 
+    profile, 
+    addTransaction, 
+    updateTransaction, 
+    deleteTransaction, 
+    addInstallmentPlan,
+    isTransactionModalOpen: isOpen,
+    editingTransaction: editTransaction,
+    closeTransactionModal: onClose
+  } = useFinance();
 
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -110,7 +112,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content animate-slide-up" style={{ maxWidth: '520px' }}>
+      <div className="modal-content" style={{ maxWidth: '520px' }}>
         <div className="modal-header">
           <h2>{editTransaction ? 'Detalhes & Edição' : 'Novo Lançamento'}</h2>
           <button className="modal-close-btn" onClick={onClose}>

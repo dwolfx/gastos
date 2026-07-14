@@ -1,5 +1,9 @@
 @import './styles/variables.css';
 
+html {
+  scroll-behavior: smooth;
+}
+
 /* CSS Reset & Base */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -54,7 +58,6 @@ button, input, select, textarea {
   animation: slideUp var(--transition-normal) forwards;
 }
 
-/* Glassmorphism & Layout Elements */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
@@ -62,12 +65,19 @@ button, input, select, textarea {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-spring-fast);
 }
 
-.glass-panel:hover {
+.glass-panel.interactive:hover,
+.glass-panel.clickable:hover {
   border-color: var(--border-color-hover);
   box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+}
+
+.glass-panel.interactive:active,
+.glass-panel.clickable:active {
+  transform: translateY(0) scale(0.985);
 }
 
 /* App Container */
@@ -278,7 +288,6 @@ button, input, select, textarea {
   text-transform: capitalize;
 }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -290,7 +299,11 @@ button, input, select, textarea {
   font-size: 0.9rem;
   cursor: pointer;
   border: none;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-spring-fast);
+}
+
+.btn:active {
+  transform: scale(0.95);
 }
 
 .btn-primary {
@@ -299,8 +312,12 @@ button, input, select, textarea {
 }
 
 .btn-primary:hover {
-  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0) scale(0.95);
 }
 
 .btn-secondary {
@@ -426,7 +443,7 @@ button, input, select, textarea {
   align-items: center;
   justify-content: center;
   padding: var(--spacing-md);
-  animation: fadeIn var(--transition-fast) forwards;
+  transition: opacity var(--transition-fast) ease, backdrop-filter var(--transition-fast) ease;
 }
 
 .modal-content {
@@ -437,7 +454,19 @@ button, input, select, textarea {
   max-width: 500px;
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: slideUp var(--transition-normal) forwards;
+  transition: transform var(--transition-spring-normal), opacity var(--transition-normal);
+  transform: translateY(0);
+  opacity: 1;
+}
+
+@starting-style {
+  .modal-overlay {
+    opacity: 0;
+  }
+  .modal-content {
+    opacity: 0;
+    transform: translateY(40px);
+  }
 }
 
 .modal-header {
@@ -567,4 +596,146 @@ button, input, select, textarea {
   .month-selector {
     justify-content: space-between;
   }
+}
+
+/* Page View Transition API styles */
+.content-transition-wrapper {
+  view-transition-name: main-content-view;
+  width: 100%;
+}
+
+::view-transition-old(main-content-view) {
+  animation: slideOutLeft 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+::view-transition-new(main-content-view) {
+  animation: slideInRight 0.25s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes slideOutLeft {
+  from { transform: translateX(0); opacity: 1; }
+  to { transform: translateX(-30px); opacity: 0; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Carousel Card Transitions */
+.carousel-grid .glass-panel.interactive {
+  transform: scale(1);
+}
+
+.carousel-grid .glass-panel.interactive.active {
+  transform: scale(1.03);
+  border-color: var(--color-purple) !important;
+}
+
+.carousel-grid .glass-panel.interactive:hover {
+  transform: scale(1.02) translateY(-2px);
+}
+
+.carousel-grid .glass-panel.interactive.active:hover {
+  transform: scale(1.05) translateY(-2px);
+}
+
+.carousel-grid .glass-panel.interactive:active {
+  transform: scale(0.97) translateY(0);
+}
+
+/* Premium SaaS Landing Page Styles */
+.landing-glow-purple {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+}
+
+.landing-glow-blue {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.06) 0%, rgba(59, 130, 246, 0) 70%);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 50%;
+}
+
+.landing-tab {
+  padding: 10px 18px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.landing-tab.active {
+  color: #ffffff;
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.3);
+}
+
+.landing-tab:hover:not(.active) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #475569;
+}
+
+.faq-container {
+  max-width: 650px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.faq-item {
+  border: 1px solid #334155;
+  border-radius: var(--radius-sm);
+  background: #1e293b;
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.faq-item:hover {
+  border-color: #475569;
+}
+
+.faq-question {
+  width: 100%;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-align: left;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.faq-answer {
+  padding: 0 24px 18px 24px;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  border-top: 1px solid rgba(51, 65, 85, 0.5);
+  animation: slideInDown 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes slideInDown {
+  from { transform: translateY(-5px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

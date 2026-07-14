@@ -67,7 +67,7 @@ export const DebtsView: React.FC = () => {
       description,
       totalAmount: total,
       interestRate: rate,
-      dueDate: dueDate || undefined,
+      dueDate: dueDate || new Date().toISOString().split('T')[0],
       paymentStatus
     });
 

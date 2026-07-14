@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { ArrowLeft, ArrowRight, Plus, CheckCircle, Clock, Trash2, ArrowUpRight, ArrowDownRight, Wallet, Calendar } from 'lucide-react';
-import { TransactionModal } from './TransactionModal';
 
 export const Dashboard: React.FC = () => {
-  const { profile, transactions, deleteTransaction, toggleTransactionStatus } = useFinance();
+  const { profile, transactions, deleteTransaction, toggleTransactionStatus, openTransactionModal } = useFinance();
   
   // Base date for navigation
   const [currentDate, setCurrentDate] = useState(() => {
     return new Date('2026-07-01T12:00:00');
   });
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
 
@@ -81,10 +80,18 @@ export const Dashboard: React.FC = () => {
 
   const expensePercentage = totalRecebido > 0 ? (totalGasto / totalRecebido) * 100 : 0;
 
+  const normalizeText = (text: string) => {
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  };
+
   // Filter list items for display
   const filteredList = monthTransactions.filter(t => {
-    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          t.category.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchNormalized = normalizeText(searchTerm);
+    const matchesSearch = normalizeText(t.description).includes(searchNormalized) ||
+                          normalizeText(t.category).includes(searchNormalized);
     const matchesCategory = filterCategory === 'all' || t.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
@@ -273,7 +280,7 @@ export const Dashboard: React.FC = () => {
               ))}
             </select>
 
-            <button className="btn btn-primary" onClick={() => setIsModalOpen(true)} style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}>
+            <button className="btn btn-primary" onClick={() => openTransactionModal()} style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}>
               <Plus size={14} /> Novo
             </button>
           </div>
@@ -288,7 +295,8 @@ export const Dashboard: React.FC = () => {
             {last10Transactions.map((t) => (
               <div 
                 key={t.id} 
-                className="glass-panel"
+                className="glass-panel interactive"
+                onClick={() => openTransactionModal(t)}
                 style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
@@ -297,12 +305,13 @@ export const Dashboard: React.FC = () => {
                   background: 'rgba(255, 255, 255, 0.01)',
                   borderRadius: 'var(--radius-sm)',
                   flexWrap: 'wrap',
-                  gap: 'var(--spacing-md)'
+                  gap: 'var(--spacing-md)',
+                  cursor: 'pointer'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
                   <button 
-                    onClick={() => toggleTransactionStatus(t.id)}
+                    onClick={(e) => { e.stopPropagation(); toggleTransactionStatus(t.id); }}
                     style={{ 
                       background: 'none', 
                       border: 'none', 
@@ -336,7 +345,7 @@ export const Dashboard: React.FC = () => {
                   </span>
                   
                   <button 
-                    onClick={() => deleteTransaction(t.id)}
+                    onClick={(e) => { e.stopPropagation(); deleteTransaction(t.id); }}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--color-red)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
@@ -350,7 +359,6 @@ export const Dashboard: React.FC = () => {
         )}
       </div>
 
-      <TransactionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
     </div>
   );
 };

@@ -27,16 +27,45 @@ export type ViewType = 'dashboard' | 'transactions' | 'boletos' | 'investments' 
 
 function MainAppContent() {
   const { profile } = useFinance();
-  const [currentView, setCurrentView] = useState<ViewType>('landing');
+  const [currentView, setCurrentView] = useState<ViewType>(() => {
+    const path = window.location.pathname.replace(/^\//, '');
+    if (['dashboard', 'transactions', 'boletos', 'investments', 'debts', 'settings'].includes(path)) {
+      return path as ViewType;
+    }
+    return 'landing';
+  });
   const [settingsTab, setSettingsTab] = useState<'general' | 'profile' | 'categories'>('general');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     document.title = APP_CONFIG.titleName;
+
+    // Listen to browser Back/Forward navigation buttons
+    const handlePopState = () => {
+      const path = window.location.pathname.replace(/^\//, '');
+      const targetView = (['dashboard', 'transactions', 'boletos', 'investments', 'debts', 'settings'].includes(path) ? path : 'landing') as ViewType;
+      
+      if (document.startViewTransition) {
+        document.startViewTransition(() => {
+          setCurrentView(targetView);
+        });
+      } else {
+        setCurrentView(targetView);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   // Helper function to animate view changes using View Transitions API
   const navigateTo = (view: ViewType, settingsTabOpt?: 'general' | 'profile' | 'categories') => {
+    // Update browser URL path using HTML5 History API
+    const newPath = view === 'landing' ? '/' : `/${view}`;
+    if (window.location.pathname !== newPath) {
+      window.history.pushState(null, '', newPath);
+    }
+
     // Check if browser supports View Transitions API
     if (document.startViewTransition) {
       document.startViewTransition(() => {

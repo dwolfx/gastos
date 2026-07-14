@@ -7,8 +7,8 @@ Este documento detalha o planejamento das próximas fases do projeto, para que n
 ## 📌 Próximos Passos (Checklist de Implementação)
 
 ### 🖥️ Fase 1: Deploy & Hosting
-- [ ] Configurar repositório Git do projeto e vincular com a **Vercel** para deploy automático por push (CI/CD).
-- [ ] Criar arquivo `vercel.json` na raiz configurado com SPA routing para evitar erros de 404 ao atualizar rotas dinâmicas.
+- [x] Configurar repositório Git do projeto e vincular com a **Vercel** para deploy automático por push (CI/CD).
+- [x] Criar arquivo `vercel.json` na raiz configurado com SPA routing para evitar erros de 404 ao atualizar rotas dinâmicas.
 
 ### 🗄️ Fase 2: Conexão com o Supabase (Database & Autenticação)
 - [ ] **Configuração do Projeto no Supabase**:

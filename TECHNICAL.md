@@ -27,18 +27,22 @@ gastos/
 │   │   ├── InvestmentsView.tsx
 │   │   ├── DebtsView.tsx
 │   │   ├── SettingsView.tsx
+│   │   ├── LandingPage.tsx     # Nova Landing Page institucional
 │   │   └── TransactionModal.tsx
+│   ├── config/             # Configurações globais do projeto
+│   │   └── appConfig.ts        # Nome dinâmico e variáveis do aplicativo
 │   ├── context/            # Motor de Estado Global (FinanceContext)
 │   │   └── FinanceContext.tsx
 │   ├── styles/             # Variáveis globais CSS
 │   │   └── variables.css
 │   ├── utils/              # Funções utilitárias (Parser de boleto)
 │   │   └── boletoParser.ts
-│   ├── App.tsx             # Layout base e navegação
+│   ├── App.tsx             # Layout base, sincronização de URL e navegação
 │   ├── index.css           # Estilização global do app
 │   └── main.tsx            # Ponto de entrada do React
 ├── index.html              # HTML Principal
 ├── tsconfig.json           # Configuração TypeScript
+├── vercel.json             # Configuração de rotas SPA na Vercel
 └── package.json            # Dependências e scripts
 ```
 

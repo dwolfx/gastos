@@ -25,15 +25,25 @@ import './index.css';
 
 export type ViewType = 'dashboard' | 'transactions' | 'boletos' | 'investments' | 'debts' | 'settings' | 'landing';
 
+const VIEW_PATH_MAP: Record<ViewType, string> = {
+  landing: '',
+  dashboard: 'resumo',
+  transactions: 'lancamentos',
+  boletos: 'boletos',
+  investments: 'investimentos',
+  debts: 'dividas',
+  settings: 'configuracoes'
+};
+
+const getViewFromPath = (path: string): ViewType => {
+  const cleanPath = decodeURIComponent(path.replace(/^\//, '').toLowerCase());
+  const entry = Object.entries(VIEW_PATH_MAP).find(([_, p]) => p === cleanPath);
+  return entry ? (entry[0] as ViewType) : 'landing';
+};
+
 function MainAppContent() {
   const { profile } = useFinance();
-  const [currentView, setCurrentView] = useState<ViewType>(() => {
-    const path = window.location.pathname.replace(/^\//, '');
-    if (['dashboard', 'transactions', 'boletos', 'investments', 'debts', 'settings'].includes(path)) {
-      return path as ViewType;
-    }
-    return 'landing';
-  });
+  const [currentView, setCurrentView] = useState<ViewType>(() => getViewFromPath(window.location.pathname));
   const [settingsTab, setSettingsTab] = useState<'general' | 'profile' | 'categories'>('general');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -42,8 +52,7 @@ function MainAppContent() {
 
     // Listen to browser Back/Forward navigation buttons
     const handlePopState = () => {
-      const path = window.location.pathname.replace(/^\//, '');
-      const targetView = (['dashboard', 'transactions', 'boletos', 'investments', 'debts', 'settings'].includes(path) ? path : 'landing') as ViewType;
+      const targetView = getViewFromPath(window.location.pathname);
       
       if (document.startViewTransition) {
         document.startViewTransition(() => {
@@ -60,8 +69,9 @@ function MainAppContent() {
 
   // Helper function to animate view changes using View Transitions API
   const navigateTo = (view: ViewType, settingsTabOpt?: 'general' | 'profile' | 'categories') => {
-    // Update browser URL path using HTML5 History API
-    const newPath = view === 'landing' ? '/' : `/${view}`;
+    // Update browser URL path using HTML5 History API (PT-BR translation)
+    const pathSegment = VIEW_PATH_MAP[view];
+    const newPath = pathSegment ? `/${pathSegment}` : '/';
     if (window.location.pathname !== newPath) {
       window.history.pushState(null, '', newPath);
     }

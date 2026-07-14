@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import type { Transaction } from '../context/FinanceContext';
 import { 
@@ -18,7 +18,14 @@ export const TransactionsList: React.FC = () => {
   // Custom states for filters, category summary, and export dropdown
   const [activeTypeFilter, setActiveTypeFilter] = useState<'all' | 'income' | 'expense' | 'pending' | 'paid'>('all');
   const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const categoriesScrollRef = useRef<HTMLDivElement>(null);
+
+  // Focal month state representing the centered month in the carousel (YYYY-MM)
+  const [focalMonth, setFocalMonth] = useState<string>(() => {
+    // Default to July 2026 as per mock data
+    return '2026-07';
+  });
 
   const scrollCategories = (direction: 'left' | 'right') => {
     if (categoriesScrollRef.current) {
@@ -30,11 +37,10 @@ export const TransactionsList: React.FC = () => {
     }
   };
 
-  // Focal month state representing the centered month in the carousel (YYYY-MM)
-  const [focalMonth, setFocalMonth] = useState<string>(() => {
-    // Default to July 2026 as per mock data
-    return '2026-07';
-  });
+  // Reset category filter when month or type filter changes
+  useEffect(() => {
+    setSelectedCategory(null);
+  }, [focalMonth, activeTypeFilter]);
 
   const getTodayStr = () => {
     const d = new Date();
@@ -213,12 +219,18 @@ export const TransactionsList: React.FC = () => {
 
   // Apply quick filters to active focal month transactions
   const filteredActiveTransactions = activeTransactions.filter(t => {
-    if (activeTypeFilter === 'all') return true;
-    if (activeTypeFilter === 'income') return t.type === 'income';
-    if (activeTypeFilter === 'expense') return t.type === 'expense';
-    if (activeTypeFilter === 'pending') return t.status === 'pending';
-    if (activeTypeFilter === 'paid') return t.status === 'paid';
-    return true;
+    // Type/status filter
+    let matchesType = true;
+    if (activeTypeFilter === 'income') matchesType = t.type === 'income';
+    else if (activeTypeFilter === 'expense') matchesType = t.type === 'expense';
+    else if (activeTypeFilter === 'pending') matchesType = t.status === 'pending';
+    else if (activeTypeFilter === 'paid') matchesType = t.status === 'paid';
+
+    // Category filter
+    let matchesCategory = true;
+    if (selectedCategory) matchesCategory = t.category === selectedCategory;
+
+    return matchesType && matchesCategory;
   });
 
   // Apply quick filters to search results
@@ -714,8 +726,29 @@ export const TransactionsList: React.FC = () => {
               
               {/* List Header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-lg)' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, textTransform: 'capitalize' }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, textTransform: 'capitalize', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   Detalhes de {getMonthName(focalMonth)} {focalMonth.split('-')[0]}
+                  {selectedCategory && (
+                    <span 
+                      onClick={() => setSelectedCategory(null)}
+                      title="Limpar filtro de categoria"
+                      style={{ 
+                        fontSize: '0.7rem', 
+                        background: 'rgba(239, 68, 68, 0.15)', 
+                        color: '#f87171', 
+                        padding: '2px 8px', 
+                        borderRadius: 'var(--radius-full)', 
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      Filtrado por: {selectedCategory} ✕
+                    </span>
+                  )}
                 </h2>
               </div>
 
@@ -764,9 +797,11 @@ export const TransactionsList: React.FC = () => {
                   >
                     {categoryTotals.map(([cat, total]) => {
                       const { icon, color } = getCategoryIconAndColor(cat);
+                      const isSelected = selectedCategory === cat;
                       return (
                         <div 
                           key={cat}
+                          onClick={() => setSelectedCategory(isSelected ? null : cat)}
                           className="glass-panel"
                           style={{ 
                             padding: '10px 12px', 
@@ -774,9 +809,14 @@ export const TransactionsList: React.FC = () => {
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '4px',
-                            background: 'rgba(255, 255, 255, 0.005)',
+                            background: isSelected ? 'rgba(139, 92, 246, 0.18)' : 'rgba(255, 255, 255, 0.005)',
+                            border: isSelected ? '1px solid #c084fc' : '1px solid var(--border-color)',
                             minWidth: '135px',
-                            flexShrink: 0
+                            flexShrink: 0,
+                            cursor: 'pointer',
+                            transform: isSelected ? 'scale(1.03)' : 'scale(1)',
+                            transition: 'all 0.2s ease',
+                            boxShadow: isSelected ? '0 0 12px rgba(139, 92, 246, 0.25)' : 'none'
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -792,13 +832,13 @@ export const TransactionsList: React.FC = () => {
                             <span style={{ 
                               fontSize: '0.75rem', 
                               fontWeight: 600, 
-                              color: 'var(--text-secondary)',
+                              color: isSelected ? '#e9d5ff' : 'var(--text-secondary)',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis'
                             }}>{cat}</span>
                           </div>
-                          <div style={{ fontSize: '0.95rem', fontWeight: 750, color: 'var(--text-primary)', marginTop: '4px' }}>
+                          <div style={{ fontSize: '0.95rem', fontWeight: 750, color: isSelected ? '#ffffff' : 'var(--text-primary)', marginTop: '4px' }}>
                             {formatCurrency(total)}
                           </div>
                         </div>
